@@ -12,84 +12,136 @@
 #10 OR if - exists and guess is = 0 Player lose (reveal word)
 
 #1 OPEN CSV AND PUT IN ARR
-f = File.open('google-10000-english.txt', 'r')
 
-wordarr = []
+require 'json'
 
-while lines = f.gets do
-  wordarr << lines
-end
-#1
-
-#2 FILTER WORDS BETWEEN 12 and 5 LENGTH
-def filterwords(arr)
+class Game
   
-  return arr.filter!{|word| word.length <= 12 && word.length >= 5}
-
-end
-
-filterwords(wordarr)
-#2
-
-#3 RANDOM NUMBER GENORATOR
-
-num = rand(1..wordarr.length-1)
-secretword = wordarr[num]
-puts secretword
-#3
-
-
-#4 Start Game!
-guesses = 7
-playerguess = []
-
-i = 0
-
-while i < secretword.length-1 do
-  playerguess << "-"
-  i += 1
-end
-
-printguess = playerguess.join("")
-
-puts "Welcome to HANGMAN! You have 7 guesses! Good luck!"
-
-while guesses >= 0 do
-  guesschar = false
-  
-  puts printguess
-
-  inputguess = gets.to_s
-
-  printguess.split("")
-
-  while inputguess.length > 2
-    puts "Only one char"
-    inputguess = gets.to_s
+  def initialize
+    @wordarr = []
+    @playerguess = []
+    @secretword = []
+    @guesses = 7
   end
 
-  a = 0
-  while a < secretword.length - 1 do
-    if secretword[a] == inputguess[0]
-      printguess[a] = inputguess[0]
-      guesschar = true
+  def getFile
+    f = File.open('google-10000-english.txt', 'r')
+
+    while lines = f.gets do
+    @wordarr << lines
     end
-    a += 1
+
+    @wordarr.filter!{|word| word.length <= 12 && word.length >= 5}
   end
 
-  if guesschar == false
-    guesses -= 1
+  def randomnumgen
+    num = rand(1..@wordarr.length-1)
+    @secretword = @wordarr[num]
   end
 
-  if !printguess.include?("-")
-    puts "You got it! The word was #{secretword} Congrats you win!"
-    return
+  def wordguessinitial
+    i = 0
+    while i < @secretword.length-1 do
+      @playerguess << "-"
+      i += 1
+    end
   end
 
-  puts "Guesses left: #{guesses}"
+  def gamestart
 
+    if File.exist?("savegame.json")
+      puts "Do you want to load previous game? (yes or no)"
+      answer = gets.chomp
+      if answer == "yes"
+        loadgame
+      else
+        getFile
+        randomnumgen
+        wordguessinitial
+      end
+    else
+      getFile
+      randomnumgen
+      wordguessinitial
+    end
+
+    printguess = @playerguess.join("")
+
+    puts "Welcome to HANGMAN! You have #{@guesses} guesses! Good luck!"
+
+    while @guesses >= 0 do
+      printguess = @playerguess.join("")
+      guesschar = false
+      
+      puts printguess
+
+      inputguess = gets.chomp
+
+      if inputguess == "save"
+        savegame
+      end
+
+      while inputguess.length > 2
+        puts "Only one char"
+        inputguess = gets.to_s
+      end
+
+      a = 0
+      while a < @secretword.length - 1 do
+        if @secretword[a] == inputguess[0]
+          @playerguess[a] = inputguess[0]
+          guesschar = true
+        end
+        a += 1
+      end
+
+      if guesschar == false
+        @guesses -= 1
+      end
+
+      if !@playerguess.include?("-")
+        puts "You got it! The word was #{@secretword} Congrats you win!"
+        return
+      end
+
+      puts "Guesses left: #{@guesses}"
+
+    end
+
+    puts "Unlucky the actual word was: #{@secretword}"
+    
+  end
+
+  def savegame
+    savedata = {
+      wordarr: @wordarr,
+      playerguess: @playerguess,
+      secretword: @secretword,
+      guesses: @guesses,
+    }.to_json
+
+    File.open("savegame.json", "w") do |file|
+      file.write(savedata)
+    end
+  end
+
+  def loadgame
+    if File.exist?("savegame.json")
+      save_data = JSON.parse(File.read("savegame.json"), symbolize_names: true)
+      @wordarr = save_data[:wordarr]
+      @playerguess = save_data[:playerguess]
+      @secretword = save_data[:secretword]
+      @guesses = save_data[:guesses]
+    return true
+    else
+    return false
+    end
+  end
 end
 
-    puts "Unlucky the actual word was: #{secretword}"
+game = Game.new
+game.gamestart
 
-#4
+
+
+
